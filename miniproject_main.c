@@ -92,20 +92,9 @@ void* controller_func(void* arg){
     } 
 }
 
-
-void* signal_func(void* arg){
-    char sendBuf[64];
-   
-    while(conn){
-      sem_wait(&sem_signal);
-      sprintf(sendBuf, "SIGNAL_ACK");
-      udpconn_send(conn, sendBuf);
-    }
-}
-
-
-void* receiver_func(void* arg){
+void* receive_and_ack_func(void* arg){
     char recvBuf[64];
+    char sendBuf[64];
     memset(recvBuf, 0, sizeof(recvBuf));
     
     while(conn){
@@ -115,7 +104,8 @@ void* receiver_func(void* arg){
 	  sem_post(&sem_control);
 	}
 	else if(strncmp(recvBuf, "SIGNAL", 6) == 0){
-	  sem_post(&sem_signal);
+	  sprintf(sendBuf, "SIGNAL_ACK");
+	  udpconn_send(conn, sendBuf);
 	}
     }
 }
@@ -135,12 +125,12 @@ int main(){
  
     pthread_t periodic_thread;
     pthread_t control_thread;
-    pthread_t signal_thread;
+    //pthread_t signal_thread;
     pthread_t receiver_thread;
     pthread_create(&periodic_thread, NULL, periodic_timer, NULL);
     pthread_create(&control_thread, NULL, controller_func, NULL);
-    pthread_create(&receiver_thread, NULL, receiver_func, NULL);
-    pthread_create(&signal_thread, NULL, signal_func, NULL);
+    pthread_create(&receiver_thread, NULL, receive_and_ack_func, NULL);
+    //pthread_create(&signal_thread, NULL, signal_func, NULL);
        
     sprintf(sendBuf, "START"); 
     udpconn_send(conn, sendBuf);
@@ -152,11 +142,11 @@ int main(){
     udpconn_send(conn, sendBuf);   
     udpconn_delete(conn);
     pthread_join(periodic_thread, NULL);
-    pthread_join(signal_thread, NULL);
+    //pthread_join(signal_thread, NULL);
     pthread_join(receiver_thread, NULL);
     sem_destroy(&period_sem);
     sem_destroy(&sem_control);
-    sem_destroy(&sem_signal);
+    //sem_destroy(&sem_signal);
     sem_destroy(&controller_sem);
     return 0;
 }
