@@ -18,7 +18,7 @@ float PID(float reference, float y, float Kp, float Ki, float dt, float* integra
 void* periodic_timer(void* args){
     struct timespec waketime;
     clock_gettime(CLOCK_REALTIME, &waketime);
-    struct timespec period = {.tv_sec = 0, .tv_nsec = 1500*1000};
+    struct timespec period = {.tv_sec = 0, .tv_nsec = 100*1500*1000};
     
     while(1){
       sem_wait(&controller_sem);
