@@ -6,14 +6,14 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-sem_t period_sem, controller_sem, sem_signal, sem_control2;
+sem_t period_sem, controller_sem, sem_signal, sem_control;
 UDPConn* conn;
 char controller_buffer[64];
 
 float PID(float reference, float y, float Kp, float Ki, float dt, float* integral){
   float error = reference - y;
   *integral += error * dt;
-  return (Kp * error + Ki * (*integral)); //+ Kd * derivative);
+  return (Kp * error + Ki * (*integral));
 }
 
 
@@ -46,12 +46,11 @@ void send_u(float u){
 void* periodic_timer(void* args){
     struct timespec waketime;
     clock_gettime(CLOCK_REALTIME, &waketime);
-    struct timespec period = {.tv_sec = 0, .tv_nsec = 1500};
+    struct timespec period = {.tv_sec = 0, .tv_nsec = 1500*1000};
     
     while(conn){
       sem_wait(&controller_sem);
       waketime = timespec_add(waketime, period);
-      //printf("time: %d:%d\n", waketime.tv_sec, waketime.tv_nsec);
       //clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &waketime, NULL);
       nanosleep_modified(&waketime);
       sem_post(&period_sem);
@@ -83,7 +82,7 @@ void* controller_func(void* arg){
 	reference = 0;
       }
       send_get();
-      sem_wait(&sem_control2);
+      sem_wait(&sem_control);
       y = parse_y(controller_buffer);
       
       u = PID(reference, y, Kp, Ki, 0.0015, &integral);
@@ -113,12 +112,11 @@ void* receiver_func(void* arg){
 	udpconn_receive(conn, recvBuf, sizeof(recvBuf));
 	if(strncmp(recvBuf, "GET_ACK", 7) == 0){
 	  load_controller_buffer(recvBuf);
-	  sem_post(&sem_control2);
+	  sem_post(&sem_control);
 	}
 	else if(strncmp(recvBuf, "SIGNAL", 6) == 0){
 	  sem_post(&sem_signal);
 	}
-	//memset(recvBuf, 0, sizeof(recvBuf)); // Reset to prevent sem overflow
     }
 }
 
@@ -127,7 +125,7 @@ int main(){
     //Set up code
     sem_init(&period_sem, 0, 0);
     sem_init(&controller_sem, 0, 1);
-    sem_init(&sem_control2, 0, 0);
+    sem_init(&sem_control, 0, 0);
     sem_init(&sem_signal, 0, 0);
     conn = udpconn_new("192.168.0.1", 9999);
     
@@ -157,7 +155,7 @@ int main(){
     pthread_join(signal_thread, NULL);
     pthread_join(receiver_thread, NULL);
     sem_destroy(&period_sem);
-    sem_destroy(&sem_control2);
+    sem_destroy(&sem_control);
     sem_destroy(&sem_signal);
     sem_destroy(&controller_sem);
     return 0;

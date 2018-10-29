@@ -1,5 +1,7 @@
 
 #include <time.h>
+#define _GNU_SOURCE
+#include <unistd.h>
 #include <sys/syscall.h>
 
 
