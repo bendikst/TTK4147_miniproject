@@ -9,7 +9,6 @@
 sem_t period_sem, controller_sem;
 UDPConn* conn;
 
-
 float PID(float reference, float y, float Kp, float Ki, float dt, float* integral){
   float error = reference - y;
   *integral += error * dt;
@@ -41,13 +40,14 @@ void send_u(float u){
 void* periodic_timer(void* args){
     struct timespec waketime;
     clock_gettime(CLOCK_REALTIME, &waketime);
-    struct timespec period = {.tv_sec = 0, .tv_nsec = 500*1500*1000};
+    struct timespec period = {.tv_sec = 0, .tv_nsec = 1500*1000};
     
     while(1){
       sem_wait(&controller_sem);
       waketime = timespec_add(waketime, period);
       //printf("time: %d:%d\n", waketime.tv_sec, waketime.tv_nsec);
-      clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &waketime, NULL);
+      //clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &waketime, NULL);
+      nanosleep_modified(&waketime);
       sem_post(&period_sem);
     }
 }
@@ -55,6 +55,7 @@ void* periodic_timer(void* args){
 
 void* controller_func(void* arg){
     char recvBuf[64];
+    memset(recvBuf, 0, sizeof(recvBuf));
     float u = 0;
     float Kp = 10;
     float Ki = 800;

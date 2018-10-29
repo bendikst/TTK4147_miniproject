@@ -8,6 +8,16 @@ int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec* reques
 }
 
 
+void nanosleep_modified(struct timespec *next)
+{
+  struct timespec time_now;
+  struct timespec sleep;
+  clock_gettime(CLOCK_REALTIME, &time_now);
+  sleep = timespec_sub(*next, time_now);
+  nanosleep(&sleep, NULL);
+}
+
+
 struct timespec timespec_normalized(time_t sec, long nsec){
     while(nsec >= 1000000000){
         nsec -= 1000000000;
@@ -34,14 +44,4 @@ int timespec_cmp(struct timespec lhs, struct timespec rhs){
     if (lhs.tv_sec > rhs.tv_sec)
         return 1;
     return lhs.tv_nsec - rhs.tv_nsec;
-}
-
-
-void nanosleep_modified(struct timespec *next)
-{
-  struct timespec time_now;
-  struct timespec sleep;
-  clock_gettime(CLOCK_REALTIME, &time_now);
-  sleep = timespec_sub(*next, time_now);
-  nanosleep(&sleep, NULL);
 }
