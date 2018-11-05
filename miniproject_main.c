@@ -6,7 +6,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-sem_t period_sem, controller_sem, sem_signal, sem_control;
+sem_t period_sem, controller_sem, sem_control;
 UDPConn* conn;
 char controller_buffer[64];
 
@@ -14,11 +14,6 @@ float PID(float reference, float y, float Kp, float Ki, float dt, float* integra
   float error = reference - y;
   *integral += error * dt;
   return (Kp * error + Ki * (*integral));
-}
-
-
-void load_controller_buffer(char* received_buffer){
-    strcpy(controller_buffer, received_buffer);
 }
 
 
@@ -100,7 +95,7 @@ void* receive_and_ack_func(void* arg){
     while(conn){
 	udpconn_receive(conn, recvBuf, sizeof(recvBuf));
 	if(strncmp(recvBuf, "GET_ACK", 7) == 0){
-	  load_controller_buffer(recvBuf);
+	  strcpy(controller_buffer, recvBuf);
 	  sem_post(&sem_control);
 	}
 	else if(strncmp(recvBuf, "SIGNAL", 6) == 0){
@@ -112,11 +107,10 @@ void* receive_and_ack_func(void* arg){
 
 
 int main(){
-    //Set up code
     sem_init(&period_sem, 0, 0);
     sem_init(&controller_sem, 0, 1);
     sem_init(&sem_control, 0, 0);
-    sem_init(&sem_signal, 0, 0);
+    
     conn = udpconn_new("192.168.0.1", 9999);
     
     char sendBuf[64];
@@ -125,28 +119,24 @@ int main(){
  
     pthread_t periodic_thread;
     pthread_t control_thread;
-    //pthread_t signal_thread;
     pthread_t receiver_thread;
     pthread_create(&periodic_thread, NULL, periodic_timer, NULL);
     pthread_create(&control_thread, NULL, controller_func, NULL);
     pthread_create(&receiver_thread, NULL, receive_and_ack_func, NULL);
-    //pthread_create(&signal_thread, NULL, signal_func, NULL);
        
     sprintf(sendBuf, "START"); 
     udpconn_send(conn, sendBuf);
     
-    
-    // END functions
     pthread_join(control_thread, NULL);
+    pthread_join(periodic_thread, NULL);
+    pthread_join(receiver_thread, NULL);
+
     sprintf(sendBuf, "STOP");
     udpconn_send(conn, sendBuf);   
     udpconn_delete(conn);
-    pthread_join(periodic_thread, NULL);
-    //pthread_join(signal_thread, NULL);
-    pthread_join(receiver_thread, NULL);
+
     sem_destroy(&period_sem);
     sem_destroy(&sem_control);
-    //sem_destroy(&sem_signal);
     sem_destroy(&controller_sem);
     return 0;
 }
