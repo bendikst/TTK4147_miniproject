@@ -1,5 +1,5 @@
 obj-m += miniproject_main.o
-BUILDROOTDIR := /home/student/Desktop/alb/buildroot
+BUILDROOTDIR := /home/student/Desktop/buildroot
 KERNELDIR := $(BUILDROOTDIR)/output/build/linux-2.6.35.4
 CROSS := $(BUILDROOTDIR)/output/staging/usr/bin/avr32-linux-gcc
 

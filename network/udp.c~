@@ -37,5 +37,5 @@ int udpconn_receive(UDPConn* conn, char* buf, int buflen){
 void udpconn_delete(UDPConn* conn){
     close(conn->sock);
     free(conn);
-    conn = NULL;
+    conn = null;
 }
